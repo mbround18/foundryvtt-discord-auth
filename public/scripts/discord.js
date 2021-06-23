@@ -7,41 +7,48 @@ const auth = {
 }
 
 /**
- * 
- * ============================================================================================================ 
- * Utilties for this script
+ *
  * ============================================================================================================
- * 
+ * Utilities for this script
+ * ============================================================================================================
+ *
  */
 
 /**
- * 
- * @param {string} tag 
- * @param {any} attributes 
- * @param {Node[]} children 
+ *
+ * @param {string} tag
+ * @param {any} attributes
+ * @param {Node[]} children
  * @returns {HTMLElement}
  */
 function craftElement(tag, attributes, children = []) {
     const element = document.createElement(tag)
-    Object.entries(attributes).forEach(([key, value]) => {
-        switch (key) {
-            case 'innerHTML':
-                element.innerHTML = value;
-                break;
-            case 'innerText':
-                element.innerText = value;
-                break;
-            case 'onclick':
-                element.onclick = value;
-                break;
-            case 'onkeypress':
-                element.onkeypress = value;
-                break;            
-            default:
-                element.setAttribute(key, value);
-                break;
-        }        
-    })
+    Object.entries(attributes).forEach(
+        /**
+         *
+         * @param {string} key
+         * @param {*} value
+         */
+        ([key, value]) => {
+            switch (key) {
+                case 'innerHTML':
+                    element.innerHTML = value;
+                    break;
+                case 'innerText':
+                    element.innerText = value;
+                    break;
+                case 'onclick':
+                    element.onclick = value;
+                    break;
+                case 'onkeypress':
+                    element.onkeypress = value;
+                    break;
+                default:
+                    element.setAttribute(key, value);
+                    break;
+            }
+        }
+    )
     children.forEach(child => {
         element.appendChild(child)
     })
@@ -50,17 +57,17 @@ function craftElement(tag, attributes, children = []) {
 
 function removeEmpty(arr) {
     return arr.filter(el => {
-        return el != null && el != '';
+        return el != null && el !== '';
     })
 }
 
 
 /**
- * 
- * ============================================================================================================ 
+ *
+ * ============================================================================================================
  * Discord Authentication flow for /join
  * ============================================================================================================
- * 
+ *
  */
 
 /**
@@ -89,7 +96,7 @@ function getJoinButton() {
 }
 
 /**
- * Returns the form container. 
+ * Returns the form container.
  * @returns {HTMLElement}
  */
 function getFormContainer() {
@@ -116,25 +123,6 @@ function getDiscordInfoContainer() {
     return discordInfoContainer()
 }
 
-// /**
-//  * Loads the discord is disabled message
-//  * @returns {HTMLElement}
-//  */
-// function getDiscordDisabled() {
-//     const { discordDisabledText } = loginPageObjects;
-//     const formContainer = getFormContainer();
-//     if (!discordDisabledText()) {
-//         console.debug("Creating Discord Disabled Notification")
-//         const textNode = document.createTextNode("Discord script loaded but is disabled! All users need to match discord; ex: username#0000")
-//         formContainer.appendChild(craftElement(
-//             'div', {id: 'discord-disabled-text'}, [textNode]
-//         ))        
-//     } else {
-//         console.info("Found Discord Login Button")        
-//     }
-//     return discordDisabledText()
-// }   
-
 /**
  * Loads the discord login anchor
  * @returns {HTMLElement}
@@ -157,7 +145,7 @@ function getDiscordLoginBtn() {
             })
         ]))
     } else {
-        console.info("Found Discord Login Button")        
+        console.info("Found Discord Login Button")
     }
     return discordLoginBtn()
 }
@@ -169,7 +157,7 @@ function getUsers() {
     return Array.apply(null, loginPageObjects.userId()[0].options)
         .map(({ label, value }) => ({ label, value}))
         .filter(({label}) => {
-            return label != null && label != '';
+            return label != null && label !== '';
         })
 }
 
@@ -198,9 +186,11 @@ function promptForAccessKey(snowflake, email) {
         const join = getJoinButton();
         const accessKey = document.getElementById('access-key').value
         password.value = `${snowflake}+${email}+${accessKey}`;
-        join.submit();
+        join &&
+        typeof join.submit ==='function' &&
+        join.submit()
     }
-    
+
     // Create access key input field.
     const accessKeyField = craftElement('input', {
         type: 'password',
@@ -212,7 +202,7 @@ function promptForAccessKey(snowflake, email) {
             }
         }
     })
-    
+
     // Create Submit Button.
     const submitButton = craftElement('button', {
         id: 'discord-submit-btn',
@@ -229,7 +219,7 @@ function promptForAccessKey(snowflake, email) {
 }
 
 /**
- * Removes the user id select list and replaces it with a hidden input field. 
+ * Removes the user id select list and replaces it with a hidden input field.
  */
 function setUsernameValue(userId) {
     loginPageObjects.userId()[0].parentElement.remove();
@@ -245,7 +235,7 @@ function setUsernameValue(userId) {
 
 function submitDiscordLogin(accessToken, tokenType) {
         /**
-         * Hides the join button. 
+         * Hides the join button.
          */
         const join = getJoinButton();
         console.debug("Hiding join button");
@@ -260,7 +250,7 @@ function submitDiscordLogin(accessToken, tokenType) {
             .then(result => result.json())
             .then(response => {
                 /**
-                 * Display error if user not found or prompts for access key. 
+                 * Display error if user not found or prompts for access key.
                  */
                 const { username, discriminator, id, email } = response;
                 const users = getUsers();
@@ -270,10 +260,10 @@ function submitDiscordLogin(accessToken, tokenType) {
                 const foundUser = users.find(user => user.label === userId)
                 if (!foundUser) {
                     infoContainer.textContent = `Woah! Sorry ${userId} but you dont have access to this server!`;
-                } else {            
+                } else {
                     setUsernameValue(foundUser.value);
                     promptForAccessKey(id, email);
-                }            
+                }
             })
             .catch((...e) => {
                 const infoContainer = getDiscordInfoContainer();
@@ -283,9 +273,9 @@ function submitDiscordLogin(accessToken, tokenType) {
 }
 
 /**
- * Our discord flow :) 
+ * Our discord flow :)
  */
-function discordFlow() {    
+function discordFlow() {
     /**
      * Load Discord Elements
      */
@@ -304,15 +294,15 @@ function discordFlow() {
             infoContainer.textContent = "No existing Discord auth data found! Try clicking the Discord login button! :)"
         })
 
-    
+
 
     /**
-     * Checks for access_token and token_type on the route params. 
+     * Checks for access_token and token_type on the route params.
      */
     console.debug("Displaying discord authentication information.");
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     const [accessToken, tokenType] = [fragment.get('access_token'), fragment.get('token_type')];
-    
+
     if (accessToken, tokenType) {
         submitDiscordLogin(accessToken, tokenType)
             .then(() => {
@@ -323,11 +313,11 @@ function discordFlow() {
 }
 
 /**
- * 
- * ============================================================================================================ 
+ *
+ * ============================================================================================================
  * Discord Players flow for /players
  * ============================================================================================================
- * 
+ *
  */
 
 function createAdditionalCols() {
@@ -369,7 +359,7 @@ function createAdditionalCols() {
             ].forEach(discordEle =>
                 row.insertBefore(discordEle, role)
             );
-        }    
+        }
     })
 }
 
@@ -377,14 +367,14 @@ function userManagementFlow() {
     createAdditionalCols();
 
     /**
-     * Add new columns 
+     * Add new columns
      */
     const [userName, passwordLabel, roleLabel] = document.querySelectorAll('#player-list li.header label')
     userName.innerHTML = "Discord UserName#0000 | User Name"
     passwordLabel.innerText = "Discord ID"
     passwordLabel.parentElement.insertBefore(craftElement('label', { innerText: 'Email' }), roleLabel)
     passwordLabel.parentElement.insertBefore(craftElement('label', { innerText: 'Access Key' }), roleLabel)
-    
+
 
     /**
      * Set User Management Width Larger
@@ -427,10 +417,10 @@ function userManagementFlow() {
                     console.debug("Skipping setting password for", userId);
                 }
             })
-            submitBtn.click()     
-            // document.getElementById('manage-players').submit()            
+            submitBtn.click()
+            // document.getElementById('manage-players').submit()
         }
-    })    
+    })
     document.querySelector('#manage-players footer').appendChild(newSubmitBtn)
 
     /**
@@ -442,20 +432,20 @@ function userManagementFlow() {
         innerHTML: createAdditionalUserBtn.innerHTML,
         onclick: () => {
             createAdditionalUserBtn.click()
-            createAdditionalCols();    
+            createAdditionalCols();
         }
     })
-    
+
     document.querySelector('#manage-players footer').insertBefore(newCreateAdditionalUserBtn, document.querySelector('button[data-action="configure-permissions"]'))
 }
 
 
 /**
- * 
- * ============================================================================================================ 
+ *
+ * ============================================================================================================
  * Flow Control Center
  * ============================================================================================================
- * 
+ *
  */
 
 
