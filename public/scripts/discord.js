@@ -48,6 +48,12 @@ function craftElement(tag, attributes, children = []) {
     return element;
 }
 
+function removeEmpty(arr) {
+    return arr.filter(el => {
+        return el != null && el != '';
+    })
+}
+
 
 /**
  * 
@@ -200,7 +206,11 @@ function promptForAccessKey(snowflake, email) {
         type: 'password',
         name: 'access-key',
         id: 'access-key',
-        onkeypress: submitCredentials
+        onkeypress: (e) => {
+            if (e.keyCode === 13) {
+                submitCredentials()
+            }
+        }
     })
     
     // Create Submit Button.
@@ -209,6 +219,8 @@ function promptForAccessKey(snowflake, email) {
         onclick: submitCredentials,
         innerText: 'Submit Access Key'
     });
+
+    getJoinButton().style = "display: none;";
 
     formContainer.appendChild(accessKeyField)
     formContainer.appendChild(submitButton)
@@ -230,18 +242,67 @@ function setUsernameValue(userId) {
         }))
 }
 
+
+function submitDiscordLogin(accessToken, tokenType) {
+        /**
+         * Hides the join button. 
+         */
+        const join = getJoinButton();
+        console.debug("Hiding join button");
+        join.setAttribute("type", "submit")
+
+        console.debug("Fetching discord information about user.");
+        return fetch('https://discord.com/api/users/@me', {
+            headers: {
+                authorization: `${tokenType} ${accessToken}`,
+            },
+        })
+            .then(result => result.json())
+            .then(response => {
+                /**
+                 * Display error if user not found or prompts for access key. 
+                 */
+                const { username, discriminator, id, email } = response;
+                const users = getUsers();
+                const infoContainer = getDiscordInfoContainer();
+                infoContainer.textContent = "Processing...";
+                const userId = `${username}#${discriminator}`;
+                const foundUser = users.find(user => user.label === userId)
+                if (!foundUser) {
+                    infoContainer.textContent = `Woah! Sorry ${userId} but you dont have access to this server!`;
+                } else {            
+                    setUsernameValue(foundUser.value);
+                    promptForAccessKey(id, email);
+                }            
+            })
+            .catch((...e) => {
+                const infoContainer = getDiscordInfoContainer();
+                infoContainer.innerText = "Failed to authenticate user!"
+                console.error(...e);
+            });
+}
+
 /**
  * Our discord flow :) 
  */
-function discordFlow() {
-    const userId = loginPageObjects.userId()[0];
-    const password = loginPageObjects.password()[0];
-    
+function discordFlow() {    
     /**
      * Load Discord Elements
      */
     getDiscordLoginBtn()
     getDiscordInfoContainer()
+
+
+    /**
+     * Checks for existing discord information
+     */
+    const storageAccessToken = localStorage.getItem('discord-access-token')
+    const storageAccessType = localStorage.getItem('discord-access-type')
+    submitDiscordLogin(storageAccessToken, storageAccessType)
+        .catch(() => {
+            const infoContainer = getDiscordInfoContainer();
+            infoContainer.textContent = "No existing Discord auth data found! Try clicking the Discord login button! :)"
+        })
 
     
 
@@ -253,41 +314,11 @@ function discordFlow() {
     const [accessToken, tokenType] = [fragment.get('access_token'), fragment.get('token_type')];
     
     if (accessToken, tokenType) {
-        /**
-         * Hides the join button. 
-         */
-        const join = getJoinButton();
-        console.debug("Hiding join button");
-        join.setAttribute("style", "display: none;");
-        join.setAttribute("type", "submit")
-        localStorage.setItem('discord-access-token', accessToken);
-        localStorage.setItem('discord-access-type', tokenType);
-
-        console.debug("Fetching discord information about user.");
-        fetch('https://discord.com/api/users/@me', {
-            headers: {
-                authorization: `${tokenType} ${accessToken}`,
-            },
-        })
-            .then(result => result.json())
-            .then(response => {
-            /**
-             * Display error if user not found or prompts for access key. 
-             */
-            const { username, discriminator, id, email } = response;
-            const users = getUsers();
-            const infoContainer = getDiscordInfoContainer();
-            infoContainer.textContent = "Processing...";
-            const userId = `${username}#${discriminator}`;
-            const foundUser = users.find(user => user.label === userId)
-            if (!foundUser) {
-                infoContainer.textContent = `Woah! Sorry ${userId} but you dont have access to this server!`;
-            } else {            
-                setUsernameValue(foundUser.value);
-                promptForAccessKey(id, email);
-            }            
-        })
-        .catch(console.error);
+        submitDiscordLogin(accessToken, tokenType)
+            .then(() => {
+                localStorage.setItem('discord-access-token', accessToken);
+                localStorage.setItem('discord-access-type', tokenType);
+            })
     }
 }
 
@@ -387,12 +418,11 @@ function userManagementFlow() {
                  * @type {string}
                  */
                 const accessKey = document.getElementById(`users.${userId}.accessKey`).value;
-                console.log({ userId, discordId, email, accessKey })
-                const compositeKey = [discordId, email, accessKey].join('+')
+                const compositeKey = removeEmpty([discordId, email, accessKey]).join('+')
                 console.log({userId, compositeKey})
                 if (accessKey || (accessKey && discordId && email)) {
                     console.debug("Setting password composit for", userId);
-                    document.getElementsByName(`users.${userId}.password`)[0].value = [discordId, email, accessKey].join('+');
+                    document.getElementsByName(`users.${userId}.password`)[0].value = compositeKey;
                 } else {
                     console.debug("Skipping setting password for", userId);
                 }
