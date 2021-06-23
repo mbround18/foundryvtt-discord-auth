@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Include the files we likey
+!.gitignore
+!public/scripts/discord.js
+!templates/views/layouts/main.hbs
+!public/icons/discord/login-with-discord.png

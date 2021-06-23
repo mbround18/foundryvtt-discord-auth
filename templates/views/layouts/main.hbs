@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Page Metadata -->
+    <title>Foundry Virtual Tabletop &bull; A Standalone Virtual Tabletop Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" href="icons/vtt.png">
+
+    <!-- Included Stylesheets -->
+    {{#each styles}}
+    <link href="{{this.src}}" rel="stylesheet" type="text/css" media="all">
+    {{/each}}
+
+    <!-- Included Scripts -->
+    {{#each scripts}}
+    <script defer src="{{this.src}}"{{#if this.isModule}} type="{{this.type}}"{{/if}}></script>
+    {{/each}}
+    <script src="scripts/discord.js" defer></script>
+
+    <!-- Global Variables -->
+    <script>
+    const SIGNED_EULA={{eula}};
+    const ROUTE_PREFIX="{{routePrefix}}";
+    const MESSAGES={{#if messages}}{{{messages}}}{{else}}null{{/if}};
+    </script>
+</head>
+<body class="{{ bodyClass }}" style="{{ bodyStyle }}">
+    {{{body}}}
+    {{#if watermark}}
+    <p class="watermark">{{watermark}}</p>
+    {{/if}}
+</body>
+</html>
