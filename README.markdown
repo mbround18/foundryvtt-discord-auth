@@ -26,8 +26,10 @@
 2. Log into your discord account.
 3. Click new application.
 4. Give it a name.
-5. Click copy on `APPLICATION ID`
-6. Paste it into the `public/scripts/discord.js` in the `changeme` text.
+5. Add your application callback to the oauth section on discord.
+6. Click copy on `APPLICATION ID`
+7. Paste it into the `public/scripts/discord.js` in the `changeme` text.
+8. Change the callback url to be your application.
 
 ## Usage
 
