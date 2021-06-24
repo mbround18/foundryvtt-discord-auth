@@ -1,9 +1,14 @@
 /**
  * Change the client ID to one from discord developer portal!
  */
-const auth = {
+
+const config = {
     clientId: 'changeme',
-    callbackUrl: 'http://127.0.0.1:30000/join'
+    callbackUrl: 'http://127.0.0.1:30000/join',
+    compositePaths: [
+        'id',
+        'email'
+    ]
 }
 
 /**
@@ -130,7 +135,7 @@ function getDiscordInfoContainer() {
 function getDiscordLoginBtn() {
     const { discordLoginBtn } = loginPageObjects;
     const formContainer = getFormContainer();
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${auth.clientId}&redirect_uri=${encodeURIComponent(auth.callbackUrl)}&response_type=token&scope=identify%20connections%20email%20guilds`
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(config.callbackUrl)}&response_type=token&scope=identify%20connections%20email%20guilds`
     if (!discordLoginBtn()) {
         console.debug("Creating Discord Login Button")
         const textNode = document.createTextNode("Click Here to Login with Discord")
@@ -185,7 +190,15 @@ function promptForAccessKey(snowflake, email) {
         const password = loginPageObjects.password()[0];
         const join = getJoinButton();
         const accessKey = document.getElementById('access-key').value
-        password.value = `${snowflake}+${email}+${accessKey}`;
+        const compositeKeyParts = [];
+        if (config.compositePaths.includes('id')) {
+            compositeKeyParts.push(snowflake)
+        }
+        if (config.compositePaths.includes('email')) {
+            compositeKeyParts.push('email')
+        }
+        compositeKeyParts.push(accessKey);
+        password.value = compositeKeyParts.join('+');
         join &&
         typeof join.submit ==='function' &&
         join.submit()
@@ -331,32 +344,35 @@ function createAdditionalCols() {
         const userId = row.getAttribute('data-user-id');
         const compositeFields = document.querySelectorAll(`div[class=discord-composite-${userId}]`)
         if (compositeFields.length !== 3) {
-            [
-                // Discord Id
-                craftElement('input', {
+            const fields = [];
+            if (config.compositePaths.includes('id')) {
+                fields.push(craftElement('input', {
                     id: `users.${userId}.discordId`,
                     type: 'number',
                     placeholder: '0'.repeat(20),
                     autocomplete: "off",
                     class: `discord-composite-${userId}`
-                }),
-                // Email
-                craftElement('input', {
+                }))
+            }
+            if (config.compositePaths.includes('email')) {
+                fields.push(craftElement('input', {
                     id: `users.${userId}.email`,
                     type: 'text',
                     placeholder: '*'.repeat(20),
                     autocomplete: "off",
                     class: `discord-composite-${userId}`
-                }),
-                // Access Key
-                craftElement('input', {
-                    id: `users.${userId}.accessKey`,
-                    type: 'password',
-                    placeholder: '*'.repeat(20),
-                    autocomplete: "off",
-                    class: `discord-composite-${userId}`
-                })
-            ].forEach(discordEle =>
+                }))
+            }
+            // Access Key
+            fields.push(craftElement('input', {
+                id: `users.${userId}.accessKey`,
+                type: 'password',
+                placeholder: '*'.repeat(20),
+                autocomplete: "off",
+                class: `discord-composite-${userId}`
+            }))
+            // Apply fields
+            fields.forEach(discordEle =>
                 row.insertBefore(discordEle, role)
             );
         }
@@ -372,8 +388,14 @@ function userManagementFlow() {
     const [userName, passwordLabel, roleLabel] = document.querySelectorAll('#player-list li.header label')
     userName.innerHTML = "Discord UserName#0000 | User Name"
     passwordLabel.innerText = "Discord ID"
-    passwordLabel.parentElement.insertBefore(craftElement('label', { innerText: 'Email' }), roleLabel)
+    if (config.compositePaths.includes('email')) {
+        passwordLabel.parentElement.insertBefore(craftElement('label', { innerText: 'Email' }), roleLabel)
+    }
     passwordLabel.parentElement.insertBefore(craftElement('label', { innerText: 'Access Key' }), roleLabel)
+    if (!config.compositePaths.includes('id')) {
+        passwordLabel.remove()
+    }
+
 
 
     /**
@@ -392,26 +414,28 @@ function userManagementFlow() {
         onclick: () => {
             const rows = document.querySelectorAll('li.player');
             rows.forEach(row => {
+                const compositeAccessParts = [];
                 /**
                  * @type {string}
                  */
                 const userId = row.getAttribute('data-user-id');
-                /**
-                 * @type {string}
-                 */
-                const discordId = document.getElementById(`users.${userId}.discordId`).value;
-                /**
-                 * @type {string}
-                 */
-                const email = document.getElementById(`users.${userId}.email`).value;
-                /**
-                 * @type {string}
-                 */
-                const accessKey = document.getElementById(`users.${userId}.accessKey`).value;
-                const compositeKey = removeEmpty([discordId, email, accessKey]).join('+')
+                if (config.compositePaths.includes('id')) {
+                    compositeAccessParts.push(
+                        document.getElementById(`users.${userId}.discordId`).value
+                    )
+                }
+                if (config.compositePaths.includes('email')) {
+                    compositeAccessParts.push(
+                        document.getElementById(`users.${userId}.email`).value
+                    )
+                }
+                compositeAccessParts.push(
+                    document.getElementById(`users.${userId}.accessKey`).value
+                )
+                const compositeKey = removeEmpty(compositeAccessParts).join('+')
                 console.log({userId, compositeKey})
-                if (accessKey || (accessKey && discordId && email)) {
-                    console.debug("Setting password composit for", userId);
+                if (!!compositeKey) {
+                    console.debug("Setting password composite for", userId);
                     document.getElementsByName(`users.${userId}.password`)[0].value = compositeKey;
                 } else {
                     console.debug("Skipping setting password for", userId);
