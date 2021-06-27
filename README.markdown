@@ -2,6 +2,8 @@
 
 > `.markdown` extension is required to avoid overwritting the existing README.md provided by Foundry.
 
+Guide with pictures: [How to add Discord Authentication to FoundryVTT ](https://dev.to/mbround18/how-to-add-discord-authentication-to-foundryvtt-5ch)
+
 - Whats the point of this?
 
     With recent concern over foundry security, this tool was created to add an extra layer of security. It Adds a composite key of a few items rather than just an access key.
